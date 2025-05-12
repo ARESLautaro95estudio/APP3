@@ -3,151 +3,126 @@ import {
   IonContent, 
   IonPage, 
   IonAlert,
-  useIonViewDidEnter,
-  useIonViewDidLeave
+  IonToast
 } from '@ionic/react';
-import { Haptics } from '@capacitor/haptics';
-import { Flashlight } from '@capacitor/flashlight';
-
 import PasswordModal from '../components/PasswordModal';
-import { orientationService, OrientationType } from '../services/OrientationService';
-import { soundService, SoundType } from '../services/SoundService';
 import './Home.css';
+
+// Importamos los servicios simulados para la vibración y el flash
+import { vibrate, toggleFlash } from '../services/MockNative';
+import { playSound, SOUNDS, stopAllSounds } from '../services/SoundService';
+import { saveLocalPassword, getLocalPassword, verifyLocalPassword } from '../services/AuthService';
 
 const Home: React.FC = () => {
   // Estados para la aplicación
   const [isAlarmActive, setIsAlarmActive] = useState(false);
-  const [password, setPassword] = useState('');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [isInitialSetup, setIsInitialSetup] = useState(true);
+  const [isInitialSetup, setIsInitialSetup] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  // Últimos valores de orientación
+  const [lastBeta, setLastBeta] = useState(0);
+  const [lastGamma, setLastGamma] = useState(0);
   
-  // Estado para tracking de actividad
-  const [lastActivity, setLastActivity] = useState<OrientationType | null>(null);
-  const [isFlashlightOn, setIsFlashlightOn] = useState(false);
-  const [isVibrating, setIsVibrating] = useState(false);
+  // Umbral para detectar cambios en la orientación
+  const orientationThreshold = 30;
+  
+  // Tiempo mínimo entre activaciones (para evitar disparos múltiples)
+  const [lastTriggerTime, setLastTriggerTime] = useState(0);
+  const triggerCooldown = 1000; // 1 segundo entre activaciones
 
   // Cuando la vista se carga
-  useIonViewDidEnter(() => {
-    // Verificar disponibilidad de funciones nativas
-    checkNativeCapabilities();
-    
-    // Mostrar configuración inicial
-    if (isInitialSetup) {
+  useEffect(() => {
+    // Verificar si ya hay una contraseña configurada
+    const savedPassword = getLocalPassword();
+    if (!savedPassword) {
+      setIsInitialSetup(true);
       setShowPasswordModal(true);
     }
-  });
-
-  // Cuando la vista se descarga
-  useIonViewDidLeave(() => {
-    // Asegurarnos de detener la detección al salir
+    
+    // Configurar detección de orientación cuando la alarma está activa
     if (isAlarmActive) {
-      stopAlarm();
+      console.log('Activando detección de orientación');
+      window.addEventListener('deviceorientation', handleOrientationChange);
+    } else {
+      console.log('Desactivando detección de orientación');
+      window.removeEventListener('deviceorientation', handleOrientationChange);
     }
-  });
+    
+    // Limpiar al desmontar
+    return () => {
+      window.removeEventListener('deviceorientation', handleOrientationChange);
+    };
+  }, [isAlarmActive]);
 
-  // Verificar capacidades nativas
-  const checkNativeCapabilities = async () => {
-    try {
-      // Verificar disponibilidad de linterna
-      const flashlightAvailable = await Flashlight.available();
-      
-      if (!flashlightAvailable) {
-        console.warn('Linterna no disponible en este dispositivo');
-      }
-    } catch (error) {
-      console.error('Error al verificar capacidades nativas:', error);
-    }
-  };
-
-  // Manejar el cambio de orientación
-  const handleOrientationChange = (orientation: OrientationType) => {
+  // Manejar cambios de orientación
+  const handleOrientationChange = (event: DeviceOrientationEvent) => {
     if (!isAlarmActive) return;
     
-    // Evitar activar el mismo efecto múltiples veces
-    if (orientation === lastActivity) return;
+    // Obtener los valores de orientación
+    const beta = event.beta || 0;  // Inclinación frontal/posterior (0° = plano)
+    const gamma = event.gamma || 0; // Inclinación izquierda/derecha (0° = plano)
     
-    setLastActivity(orientation);
+    // Calcular cambio en la orientación
+    const betaChange = Math.abs(beta - lastBeta);
+    const gammaChange = Math.abs(gamma - lastGamma);
     
-    switch (orientation) {
-      case OrientationType.LEFT:
-        soundService.play(SoundType.LEFT);
-        break;
-      case OrientationType.RIGHT:
-        soundService.play(SoundType.RIGHT);
-        break;
-      case OrientationType.VERTICAL:
-        soundService.play(SoundType.VERTICAL);
-        toggleFlashlight(true);
-        setTimeout(() => toggleFlashlight(false), 5000);
-        break;
-      case OrientationType.HORIZONTAL:
-        soundService.play(SoundType.HORIZONTAL);
-        triggerVibration();
-        break;
-      default:
-        // Posición normal, no hacemos nada
-        break;
+    // Actualizar últimos valores
+    setLastBeta(beta);
+    setLastGamma(gamma);
+    
+    // Verificar si pasó suficiente tiempo desde la última activación
+    const now = Date.now();
+    if (now - lastTriggerTime < triggerCooldown) {
+      return;
     }
-  };
-
-  // Activar/desactivar linterna
-  const toggleFlashlight = async (state: boolean) => {
-    try {
-      if (state && !isFlashlightOn) {
-        await Flashlight.toggle(true);
-        setIsFlashlightOn(true);
-      } else if (!state && isFlashlightOn) {
-        await Flashlight.toggle(false);
-        setIsFlashlightOn(false);
+    
+    // Detectar orientación específica
+    if (gammaChange > orientationThreshold) {
+      // Movimiento a la izquierda
+      if (gamma < -orientationThreshold) {
+        console.log('Movimiento a la izquierda detectado');
+        playSound(SOUNDS.LEFT);
+        setLastTriggerTime(now);
+      } 
+      // Movimiento a la derecha
+      else if (gamma > orientationThreshold) {
+        console.log('Movimiento a la derecha detectado');
+        playSound(SOUNDS.RIGHT);
+        setLastTriggerTime(now);
       }
-    } catch (error) {
-      console.error('Error al controlar linterna:', error);
     }
-  };
-
-  // Activar vibración
-  const triggerVibration = async () => {
-    if (isVibrating) return;
     
-    try {
-      setIsVibrating(true);
-      
-      // Primer pulso de vibración
-      await Haptics.vibrate();
-      
-      // Crear un intervalo para vibración continua
-      const interval = setInterval(async () => {
-        await Haptics.vibrate();
-      }, 500);
-      
-      // Detener después de 5 segundos
-      setTimeout(() => {
-        clearInterval(interval);
-        setIsVibrating(false);
-      }, 5000);
-    } catch (error) {
-      console.error('Error al vibrar:', error);
-      setIsVibrating(false);
+    // Posición vertical (teléfono en pie)
+    if (beta > 60 && Math.abs(gamma) < 30) {
+      console.log('Posición vertical detectada');
+      playSound(SOUNDS.VERTICAL);
+      toggleFlash(true);
+      setTimeout(() => toggleFlash(false), 5000);
+      setLastTriggerTime(now);
     }
-  };
-
-  // Activar todos los efectos de alarma (contraseña incorrecta)
-  const triggerAllAlerts = () => {
-    soundService.play(SoundType.ERROR);
-    triggerVibration();
-    toggleFlashlight(true);
-    setTimeout(() => toggleFlashlight(false), 5000);
+    
+    // Posición horizontal pero boca abajo
+    if (Math.abs(beta) > 150 || beta < -60) {
+      console.log('Posición horizontal (boca abajo) detectada');
+      playSound(SOUNDS.HORIZONTAL);
+      vibrate(5000);
+      setLastTriggerTime(now);
+    }
   };
 
   // Activar la alarma
-  const startAlarm = async () => {
+  const startAlarm = () => {
     try {
       setIsAlarmActive(true);
       
-      // Iniciar detección de orientación
-      await orientationService.start(handleOrientationChange);
+      // Mostramos un mensaje para fines de desarrollo
+      console.log('Alarma activada. Mueve el dispositivo para probar.');
+      setToastMessage('Alarma activada');
+      setShowToast(true);
     } catch (error) {
       console.error('Error al iniciar la alarma:', error);
       setAlertMessage('No se pudo activar la alarma. Verifica los permisos del dispositivo.');
@@ -157,21 +132,11 @@ const Home: React.FC = () => {
   };
 
   // Desactivar la alarma
-  const stopAlarm = async () => {
-    try {
-      setIsAlarmActive(false);
-      
-      // Detener detección de orientación
-      await orientationService.stop();
-      
-      // Detener sonidos
-      soundService.stopAll();
-      
-      // Asegurarnos de que la linterna está apagada
-      await toggleFlashlight(false);
-    } catch (error) {
-      console.error('Error al detener la alarma:', error);
-    }
+  const stopAlarm = () => {
+    setIsAlarmActive(false);
+    stopAllSounds();
+    toggleFlash(false);
+    console.log('Alarma desactivada.');
   };
 
   // Manejar el clic en el botón principal
@@ -192,40 +157,44 @@ const Home: React.FC = () => {
   const handlePasswordVerify = (enteredPassword: string) => {
     if (isInitialSetup) {
       // Guardar contraseña inicial
-      setPassword(enteredPassword);
+      saveLocalPassword(enteredPassword);
       setIsInitialSetup(false);
       setShowPasswordModal(false);
       
+      // Mostrar mensaje de éxito
+      setToastMessage('Contraseña configurada correctamente');
+      setShowToast(true);
+      
       // Activar alarma automáticamente después de configurar la contraseña
       startAlarm();
-    } else if (enteredPassword === password) {
+    } else if (verifyLocalPassword(enteredPassword)) {
       // Contraseña correcta, desactivar alarma
       stopAlarm();
       setShowPasswordModal(false);
+      
+      setToastMessage('Alarma desactivada');
+      setShowToast(true);
     } else {
       // Contraseña incorrecta - activar todos los efectos
       triggerAllAlerts();
       setShowPasswordModal(false);
+      
+      setToastMessage('¡Contraseña incorrecta!');
+      setShowToast(true);
     }
   };
 
-  // Limpiar recursos al desmontar el componente
-  useEffect(() => {
-    return () => {
-      // Detener detección de orientación
-      orientationService.stop();
-      
-      // Detener sonidos
-      soundService.stopAll();
-      
-      // Apagar linterna
-      toggleFlashlight(false);
-    };
-  }, []);
+  // Activar todos los efectos al ingresar contraseña incorrecta
+  const triggerAllAlerts = () => {
+    playSound(SOUNDS.ERROR);
+    vibrate(5000);
+    toggleFlash(true);
+    setTimeout(() => toggleFlash(false), 5000);
+  };
 
   return (
-    <IonPage placeholder="">
-      <IonContent fullscreen placeholder="">
+    <IonPage placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+      <IonContent fullscreen placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
         <div 
           className={`alarm-button ${isAlarmActive ? 'active' : 'inactive'}`}
           onClick={handleButtonClick}
@@ -249,6 +218,15 @@ const Home: React.FC = () => {
           header="Alerta"
           message={alertMessage}
           buttons={['OK']}
+        />
+        
+        {/* Toast para mensajes de confirmación */}
+        <IonToast
+          isOpen={showToast}
+          onDidDismiss={() => setShowToast(false)}
+          message={toastMessage}
+          duration={2000}
+          position="bottom"
         />
       </IonContent>
     </IonPage>

@@ -17,17 +17,17 @@ const AnimatedSplash: React.FC<{onFinished: () => void}> = ({ onFinished }) => {
   }, [onFinished]);
 
   return (
-    <IonPage className="animated-splash" placeholder="">
-      <IonContent fullscreen placeholder="">
-        <div className="splash-container">
-          <h1 className="name-text">LAUTARO MARGUERY</h1>
-          <div className="icon-container">
-            <img src={appIcon} alt="App Icon" className="app-icon" />
-          </div>
-          <h3 className="division-text">PRACTICAS PROFESIONALES</h3>
-        </div>
-      </IonContent>
-    </IonPage>
+    <IonPage placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined} >
+  <IonContent fullscreen placeholder={true} onPointerEnterCapture={() => {}} onPointerLeaveCapture={() => {}}>
+    <div className="splash-container">
+      <h1 className="name-text">LAUTARO MARGUERY</h1>
+      <div className="icon-container">
+        <img src={appIcon} alt="App Icon" className="app-icon" />
+      </div>
+      <h3 className="division-text">PRACTICAS PROFESIONALES</h3>
+    </div>
+  </IonContent>
+</IonPage>
   );
 };
 

@@ -1,12 +1,8 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously as firebaseSignInAnonymously } from 'firebase/auth';
-import { 
-  getFirestore, 
-  doc as firestoreDoc, 
-  setDoc as firestoreSetDoc, 
-  getDoc as firestoreGetDoc 
-} from 'firebase/firestore';
+import { getAuth, signInAnonymously } from 'firebase/auth';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 
+// Configuración 
 const firebaseConfig = {
   apiKey: "AIzaSyDUUOq1tC55glGr45dLo8T2nuD_-ELLWXc",
   authDomain: "app-l-m-primer-etapa.firebaseapp.com",
@@ -16,28 +12,29 @@ const firebaseConfig = {
   appId: "1:632233436576:web:e49ad8a9122701b38430c5",
   measurementId: "G-6P8GLWGBY8"
 };
-
-// Initialize Firebase
+// Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Iniciar sesión anónima
+// Función para iniciar sesión anónima
 export const signInAnon = async () => {
   try {
-    const userCredential = await firebaseSignInAnonymously(auth);
+    const userCredential = await signInAnonymously(auth);
     return userCredential.user;
   } catch (error) {
+    
     console.error('Error al iniciar sesión anónima:', error);
     throw error;
   }
 };
 
-// Guardar contraseña en Firestore (opcional)
-export const savePassword = async (userId: string, hashedPassword: string) => {
+// Guardar contraseña en Firestore
+export const savePassword = async (userId: string, password: string) => {
   try {
-    await firestoreSetDoc(firestoreDoc(db, 'users', userId), {
-      password: hashedPassword,
+    // En una aplicación real deberías hashear la contraseña
+    await setDoc(doc(db, 'users', userId), {
+      password: password,
       createdAt: new Date()
     });
     return true;
@@ -47,11 +44,11 @@ export const savePassword = async (userId: string, hashedPassword: string) => {
   }
 };
 
-// Obtener contraseña de Firestore (opcional)
+// Obtener contraseña de Firestore
 export const getPassword = async (userId: string) => {
   try {
-    const docRef = firestoreDoc(db, 'users', userId);
-    const docSnap = await firestoreGetDoc(docRef);
+    const docRef = doc(db, 'users', userId);
+    const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
       return docSnap.data().password;

@@ -1,9 +1,8 @@
-import { Redirect, Route } from 'react-router-dom';
+import React, { useState } from 'react';
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
+import { Redirect, Route } from 'react-router-dom';
 import Home from './pages/Home';
-import { useState, useEffect } from 'react';
-import AnimatedSplash from './components/AnimatedSplash';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -21,40 +20,26 @@ import '@ionic/react/css/text-transformation.css';
 import '@ionic/react/css/flex-utils.css';
 import '@ionic/react/css/display.css';
 
-/* Ionic Dark Mode */
-import '@ionic/react/css/palettes/dark.system.css';
-
 /* Theme variables */
 import './theme/variables.css';
 
 setupIonicReact({
   mode: 'ios', // Usar estilo iOS para una apariencia más consistente
-  animated: true,
 });
 
 const App: React.FC = () => {
-  const [showSplash, setShowSplash] = useState(true);
-
-  const handleSplashFinished = () => {
-    setShowSplash(false);
-  };
-
   return (
     <IonApp>
-      {showSplash ? (
-        <AnimatedSplash onFinished={handleSplashFinished} />
-      ) : (
-        <IonReactRouter>
-          <IonRouterOutlet placeholder="">
-            <Route exact path="/home">
-              <Home />
-            </Route>
-            <Route exact path="/">
-              <Redirect to="/home" />
-            </Route>
-          </IonRouterOutlet>
-        </IonReactRouter>
-      )}
+      <IonReactRouter>
+        <IonRouterOutlet placeholder={undefined} onPointerEnterCapture={undefined} onPointerLeaveCapture={undefined}>
+          <Route exact path="/home">
+            <Home />
+          </Route>
+          <Route exact path="/">
+            <Redirect to="/home" />
+          </Route>
+        </IonRouterOutlet>
+      </IonReactRouter>
     </IonApp>
   );
 };

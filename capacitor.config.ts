@@ -6,17 +6,9 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   bundledWebRuntime: false,
   plugins: {
-    SplashScreen: {
-      launchShowDuration: 0
-    },
-    Haptics: {
-      vibrate: true
-    },
-    DeviceMotion: {
-      enable: true
-    },
-    Flashlight: {
-      enable: true
+    // Configuración de permisos
+    Permissions: {
+      permissions: ['accelerometer', 'magnetometer', 'gyroscope']
     }
   },
   server: {

@@ -1,105 +1,151 @@
-// Para este proyecto, necesitarás grabar 5 archivos de sonido:
-// 1. left.mp3 - "¡Están hurtando el dispositivo!"
-// 2. right.mp3 - "¡Epa! ¿Qué estás por hacer?"
-// 3. vertical.mp3 - Algún sonido de alerta
-// 4. horizontal.mp3 - Otro sonido de alerta
-// 5. error.mp3 - Sonido para contraseña incorrecta
+// SoundService.ts
+// Este servicio maneja la reproducción de sonidos para la aplicación
 
-// Importamos los sonidos
-// Importante: Debes crear estos archivos y colocarlos en la carpeta assets/sounds/
-import leftSound from '../assets/sounds/left.mp3';
-import rightSound from '../assets/sounds/right.mp3';
-import verticalSound from '../assets/sounds/vertical.mp3';
-import horizontalSound from '../assets/sounds/horizontal.mp3';
-import errorSound from '../assets/sounds/error.mp3';
+// Define los tipos de sonidos disponibles
+export const SOUNDS = {
+  LEFT: 'left',
+  RIGHT: 'right',
+  VERTICAL: 'vertical',
+  HORIZONTAL: 'horizontal',
+  ERROR: 'error'
+};
 
-// Enumeración de los tipos de sonidos disponibles
-export enum SoundType {
-  LEFT = 'left',
-  RIGHT = 'right',
-  VERTICAL = 'vertical',
-  HORIZONTAL = 'horizontal',
-  ERROR = 'error',
-}
+// Mapeo de sonidos a mensajes (para alertas de fallback)
+const soundMessages = {
+  [SOUNDS.LEFT]: "¡Están hurtando el dispositivo!",
+  [SOUNDS.RIGHT]: "¡Epa! ¿Qué estás por hacer?",
+  [SOUNDS.VERTICAL]: "¡Alarma activada! Posición vertical.",
+  [SOUNDS.HORIZONTAL]: "¡Alarma activada! Posición horizontal.",
+  [SOUNDS.ERROR]: "¡Contraseña incorrecta! Alarma activada."
+};
 
-// Clase para manejar los sonidos
-class SoundService {
-  private sounds: Map<SoundType, HTMLAudioElement>;
-  private currentSound: HTMLAudioElement | null = null;
+// Mapa de instancias de Audio para cada sonido
+const audioInstances: { [key: string]: HTMLAudioElement } = {};
 
-  constructor() {
-    // Inicializamos el mapa de sonidos
-    this.sounds = new Map<SoundType, HTMLAudioElement>();
-    
-    // Creamos y configuramos los elementos de audio
-    this.sounds.set(SoundType.LEFT, new Audio(leftSound));
-    this.sounds.set(SoundType.RIGHT, new Audio(rightSound));
-    this.sounds.set(SoundType.VERTICAL, new Audio(verticalSound));
-    this.sounds.set(SoundType.HORIZONTAL, new Audio(horizontalSound));
-    this.sounds.set(SoundType.ERROR, new Audio(errorSound));
-    
-    // Configuramos cada sonido
-    this.sounds.forEach((audio) => {
-      // Precargar los sonidos
-      audio.load();
-      // Configurar para que se pueda reproducir en bucle si es necesario
-      audio.loop = false;
-    });
-  }
+// Mensajes adicionales para debugging
+const debugMessages = {
+  [SOUNDS.LEFT]: "Movimiento a la izquierda detectado",
+  [SOUNDS.RIGHT]: "Movimiento a la derecha detectado", 
+  [SOUNDS.VERTICAL]: "Posición vertical detectada",
+  [SOUNDS.HORIZONTAL]: "Posición horizontal detectada",
+  [SOUNDS.ERROR]: "Contraseña incorrecta"
+};
 
-  // Reproducir un sonido
-  play(type: SoundType): void {
-    // Detener cualquier sonido que esté reproduciéndose
-    this.stopAll();
-    
-    // Obtener el sonido solicitado
-    const audio = this.sounds.get(type);
-    
-    if (audio) {
-      // Reiniciar el sonido
-      audio.currentTime = 0;
+// Estados para evitar reproducción múltiple
+let isPlaying = false;
+let currentSound: string | null = null;
+
+// Función para inicializar el servicio de sonido
+export const initSoundService = () => {
+  // Para una implementación real, deberías usar archivos de audio reales
+  try {
+    // Crear elementos de audio y precargarlos
+    Object.keys(SOUNDS).forEach(key => {
+      const soundKey = key as keyof typeof SOUNDS;
+      const soundName = SOUNDS[soundKey];
       
+      // En una implementación real, usarías rutas reales
+      const soundPath = `assets/sounds/${soundName}.mp3`;
+      
+      // Crear elemento de audio
+      const audio = new Audio();
+      audio.preload = 'auto';
+      
+      // En un proyecto real, establecer la fuente
+      // audio.src = soundPath;
+      
+      // Almacenar instancia
+      audioInstances[soundName] = audio;
+    });
+    
+    console.log('Servicio de sonido inicializado');
+  } catch (error) {
+    console.error('Error al inicializar el servicio de sonido:', error);
+  }
+};
+
+// Función para reproducir un sonido
+export const playSound = (soundType: string) => {
+  // Evitar reproducción múltiple
+  if (isPlaying) {
+    return;
+  }
+  
+  // Marcar como reproduciendo
+  isPlaying = true;
+  currentSound = soundType;
+  
+  // Mostrar mensaje de debugging
+  console.log(`Reproduciendo sonido: ${soundType}`);
+  if (debugMessages[soundType]) {
+    console.log(debugMessages[soundType]);
+  }
+  
+  // Para una implementación real, reproducir el sonido
+  try {
+    // Verificar si hay un mensaje asociado
+    if (soundMessages[soundType]) {
+      // Para desarrollo: mostrar una alerta con el mensaje
+      alert(soundMessages[soundType]);
+    }
+    
+    // En una implementación real:
+    /*
+    if (audioInstances[soundType]) {
       // Reproducir el sonido
-      audio.play().catch((error) => {
-        console.error('Error al reproducir sonido:', error);
-      });
-      
-      // Guardar referencia al sonido actual
-      this.currentSound = audio;
+      audioInstances[soundType].currentTime = 0;
+      audioInstances[soundType].play()
+        .then(() => {
+          // Configurar evento para cuando termine
+          audioInstances[soundType].onended = () => {
+            isPlaying = false;
+            currentSound = null;
+          };
+        })
+        .catch(error => {
+          console.error('Error al reproducir sonido:', error);
+          isPlaying = false;
+          currentSound = null;
+        });
     }
-  }
-
-  // Detener todos los sonidos
-  stopAll(): void {
-    this.sounds.forEach((audio) => {
-      audio.pause();
-      audio.currentTime = 0;
-    });
+    */
     
-    this.currentSound = null;
+    // Para simulación, desactivar después de un tiempo
+    setTimeout(() => {
+      isPlaying = false;
+      currentSound = null;
+    }, 1000);
+    
+  } catch (error) {
+    console.error('Error al reproducir sonido:', error);
+    isPlaying = false;
+    currentSound = null;
   }
+};
 
-  // Pausar el sonido actual
-  pause(): void {
-    if (this.currentSound) {
-      this.currentSound.pause();
+// Función para detener todos los sonidos
+export const stopAllSounds = () => {
+  try {
+    // Detener el sonido actual
+    if (currentSound && audioInstances[currentSound]) {
+      audioInstances[currentSound].pause();
+      audioInstances[currentSound].currentTime = 0;
     }
+    
+    // Reiniciar estados
+    isPlaying = false;
+    currentSound = null;
+    
+    console.log('Todos los sonidos detenidos');
+  } catch (error) {
+    console.error('Error al detener sonidos:', error);
   }
+};
 
-  // Reanudar el sonido actual
-  resume(): void {
-    if (this.currentSound) {
-      this.currentSound.play().catch((error) => {
-        console.error('Error al reanudar sonido:', error);
-      });
-    }
-  }
+// Función para verificar si hay algún sonido reproduciéndose
+export const isSoundPlaying = (): boolean => {
+  return isPlaying;
+};
 
-  // Comprobar si hay algún sonido reproduciéndose
-  isPlaying(): boolean {
-    return !!this.currentSound && !this.currentSound.paused;
-  }
-}
-
-// Crear y exportar una instancia única del servicio (patrón Singleton)
-export const soundService = new SoundService();
+// Inicializar el servicio
+initSoundService();

@@ -9,7 +9,8 @@ import {
   IonGrid,
   IonRow,
   IonCol,
-  IonText
+  IonText,
+  InputChangeEventDetail
 } from '@ionic/react';
 import './PasswordModal.css';
 
@@ -60,35 +61,37 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
   };
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={handleCancel} className="password-modal">
-      <IonContent className="ion-padding">
+    <IonModal isOpen={isOpen} onDidDismiss={handleCancel} className="password-modal" placeholder="">
+      <IonContent className="ion-padding" placeholder="">
         <h2 className="ion-text-center">
           {isInitialSetup ? 'Configura tu contraseña' : 'Ingresa tu contraseña'}
         </h2>
         
-        <IonGrid>
-          <IonRow>
-            <IonCol>
-              <IonItem>
-                <IonLabel position="floating">Contraseña</IonLabel>
+        <IonGrid placeholder="">
+          <IonRow placeholder="">
+            <IonCol placeholder="">
+              <IonItem placeholder="">
+                <IonLabel position="floating" placeholder="">Contraseña</IonLabel>
                 <IonInput
                   type="password"
                   value={password}
-                  onIonChange={(e) => setPassword(e.detail.value || '')}
+                  onIonChange={(e: CustomEvent<InputChangeEventDetail>) => setPassword(e.detail.value || '')}
+                  placeholder=""
                 />
               </IonItem>
             </IonCol>
           </IonRow>
           
           {isInitialSetup && (
-            <IonRow>
-              <IonCol>
-                <IonItem>
-                  <IonLabel position="floating">Confirmar contraseña</IonLabel>
+            <IonRow placeholder="">
+              <IonCol placeholder="">
+                <IonItem placeholder="">
+                  <IonLabel position="floating" placeholder="">Confirmar contraseña</IonLabel>
                   <IonInput
                     type="password"
                     value={confirmPassword}
-                    onIonChange={(e) => setConfirmPassword(e.detail.value || '')}
+                    onIonChange={(e: CustomEvent<InputChangeEventDetail>) => setConfirmPassword(e.detail.value || '')}
+                    placeholder=""
                   />
                 </IonItem>
               </IonCol>
@@ -96,27 +99,27 @@ const PasswordModal: React.FC<PasswordModalProps> = ({
           )}
           
           {error && (
-            <IonRow>
-              <IonCol>
-                <IonText color="danger">
+            <IonRow placeholder="">
+              <IonCol placeholder="">
+                <IonText color="danger" placeholder="">
                   <p className="ion-text-center">{error}</p>
                 </IonText>
               </IonCol>
             </IonRow>
           )}
           
-          <IonRow className="ion-margin-top">
-            <IonCol>
-              <IonButton expand="block" onClick={handleVerify}>
+          <IonRow className="ion-margin-top" placeholder="">
+            <IonCol placeholder="">
+              <IonButton expand="block" onClick={handleVerify} placeholder="">
                 {isInitialSetup ? 'Configurar' : 'Verificar'}
               </IonButton>
             </IonCol>
           </IonRow>
           
           {!isInitialSetup && (
-            <IonRow>
-              <IonCol>
-                <IonButton expand="block" fill="outline" color="medium" onClick={handleCancel}>
+            <IonRow placeholder="">
+              <IonCol placeholder="">
+                <IonButton expand="block" fill="outline" color="medium" onClick={handleCancel} placeholder="">
                   Cancelar
                 </IonButton>
               </IonCol>

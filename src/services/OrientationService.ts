@@ -1,4 +1,4 @@
-import { Motion, MotionEventResult } from '@capacitor/motion';
+import { DeviceMotion, DeviceMotionAccelerationData } from '@capacitor/device-motion';
 
 // Enumeración para los tipos de orientación
 export enum OrientationType {
@@ -22,8 +22,8 @@ interface OrientationConfig {
 }
 
 class OrientationService {
-  private isWatching: boolean = false;
-  private lastOrientation: MotionEventResult = { accelerationIncludingGravity: { x: 0, y: 0, z: 0 } };
+  private watchId: string | null = null;
+  private lastOrientation: DeviceMotionAccelerationData = { x: 0, y: 0, z: 0 };
   private currentOrientation: OrientationType = OrientationType.NORMAL;
   private callback: OrientationCallback | null = null;
   private config: OrientationConfig = {
@@ -40,7 +40,7 @@ class OrientationService {
 
   // Iniciar la detección de orientación
   async start(callback: OrientationCallback): Promise<void> {
-    if (this.isWatching) {
+    if (this.watchId) {
       // Ya está iniciado, detener primero
       await this.stop();
     }
@@ -49,12 +49,19 @@ class OrientationService {
 
     try {
       // Solicitar permisos si es necesario
-      await Motion.requestPermissions();
+      try {
+        await DeviceMotion.requestPermissions();
+      } catch (error) {
+        console.warn('Error al solicitar permisos o no es necesario en este dispositivo', error);
+        // Continuar de todos modos, ya que en algunos dispositivos no es necesario
+      }
       
       // Iniciar la observación de movimiento
-      await Motion.addListener('accel', this.handleMotionChange.bind(this));
+      this.watchId = await DeviceMotion.watchAcceleration(
+        { frequency: this.config.frequency || 500 },
+        this.handleMotionChange.bind(this)
+      );
       
-      this.isWatching = true;
       return Promise.resolve();
     } catch (error) {
       console.error('Error al iniciar detección de orientación:', error);
@@ -64,10 +71,10 @@ class OrientationService {
 
   // Detener la detección de orientación
   async stop(): Promise<void> {
-    if (this.isWatching) {
+    if (this.watchId) {
       try {
-        await Motion.removeAllListeners();
-        this.isWatching = false;
+        await DeviceMotion.removeAllListeners();
+        this.watchId = null;
         this.callback = null;
         return Promise.resolve();
       } catch (error) {
@@ -79,40 +86,36 @@ class OrientationService {
   }
 
   // Manejar cambios en el movimiento
-  private handleMotionChange(acceleration: MotionEventResult): void {
-    // Al inicio del método handleMotionChange:
-const threshold = this.config.threshold || 4.0;
-const changeThreshold = this.config.changeThreshold || 3.0;
-    if (!acceleration.accelerationIncludingGravity) return;
-    
-    const { x, y, z } = acceleration.accelerationIncludingGravity;
-    const { threshold, changeThreshold } = this.config;
+  private handleMotionChange(acceleration: DeviceMotionAccelerationData): void {
+    const { x, y, z } = acceleration;
+    const thresholdValue = this.config.threshold || 4.0;
+    const changeThresholdValue = this.config.changeThreshold || 3.0;
     
     // Verificar si hay un cambio significativo en la orientación
     const significantChange = 
-      Math.abs(x - this.lastOrientation.accelerationIncludingGravity.x) > changeThreshold || 
-      Math.abs(y - this.lastOrientation.accelerationIncludingGravity.y) > changeThreshold || 
-      Math.abs(z - this.lastOrientation.accelerationIncludingGravity.z) > changeThreshold;
+      Math.abs(x - this.lastOrientation.x) > changeThresholdValue || 
+      Math.abs(y - this.lastOrientation.y) > changeThresholdValue || 
+      Math.abs(z - this.lastOrientation.z) > changeThresholdValue;
     
     if (significantChange) {
       // Actualizar última orientación
-      this.lastOrientation = acceleration;
+      this.lastOrientation = { x, y, z };
       
       // Determinar la orientación actual
       let newOrientation: OrientationType = OrientationType.NORMAL;
       
-      if (Math.abs(x) > threshold) {
-        if (x < -threshold) {
+      if (Math.abs(x) > thresholdValue) {
+        if (x < -thresholdValue) {
           newOrientation = OrientationType.LEFT;
-        } else if (x > threshold) {
+        } else if (x > thresholdValue) {
           newOrientation = OrientationType.RIGHT;
         }
-      } else if (Math.abs(y) > threshold) {
-        if (y > threshold) {
+      } else if (Math.abs(y) > thresholdValue) {
+        if (y > thresholdValue) {
           newOrientation = OrientationType.VERTICAL;
         }
-      } else if (Math.abs(z) > threshold) {
-        if (z > threshold) {
+      } else if (Math.abs(z) > thresholdValue) {
+        if (z > thresholdValue) {
           newOrientation = OrientationType.HORIZONTAL;
         }
       }

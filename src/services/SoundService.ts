@@ -1,5 +1,12 @@
+// Para este proyecto, necesitarás grabar 5 archivos de sonido:
+// 1. left.mp3 - "¡Están hurtando el dispositivo!"
+// 2. right.mp3 - "¡Epa! ¿Qué estás por hacer?"
+// 3. vertical.mp3 - Algún sonido de alerta
+// 4. horizontal.mp3 - Otro sonido de alerta
+// 5. error.mp3 - Sonido para contraseña incorrecta
+
 // Importamos los sonidos
-// Nota: Deberás grabar estos sonidos y colocarlos en la carpeta assets/sounds/
+// Importante: Debes crear estos archivos y colocarlos en la carpeta assets/sounds/
 import leftSound from '../assets/sounds/left.mp3';
 import rightSound from '../assets/sounds/right.mp3';
 import verticalSound from '../assets/sounds/vertical.mp3';

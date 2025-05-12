@@ -7,11 +7,11 @@ import {
   useIonViewDidLeave
 } from '@ionic/react';
 import { Haptics } from '@capacitor/haptics';
+import { Flashlight } from '@capacitor/flashlight';
 
 import PasswordModal from '../components/PasswordModal';
 import { orientationService, OrientationType } from '../services/OrientationService';
 import { soundService, SoundType } from '../services/SoundService';
-import { capacitorDeviceHelper } from '../services/CapacitorDeviceHelper';
 import './Home.css';
 
 const Home: React.FC = () => {
@@ -50,11 +50,11 @@ const Home: React.FC = () => {
   // Verificar capacidades nativas
   const checkNativeCapabilities = async () => {
     try {
-      // Verificar si es un dispositivo real
-      const isReal = await capacitorDeviceHelper.isRealDevice();
+      // Verificar disponibilidad de linterna
+      const flashlightAvailable = await Flashlight.available();
       
-      if (!isReal) {
-        console.warn('Ejecutando en un emulador o entorno de desarrollo');
+      if (!flashlightAvailable) {
+        console.warn('Linterna no disponible en este dispositivo');
       }
     } catch (error) {
       console.error('Error al verificar capacidades nativas:', error);
@@ -96,10 +96,10 @@ const Home: React.FC = () => {
   const toggleFlashlight = async (state: boolean) => {
     try {
       if (state && !isFlashlightOn) {
-        await capacitorDeviceHelper.toggleFlashlight(true);
+        await Flashlight.toggle(true);
         setIsFlashlightOn(true);
       } else if (!state && isFlashlightOn) {
-        await capacitorDeviceHelper.toggleFlashlight(false);
+        await Flashlight.toggle(false);
         setIsFlashlightOn(false);
       }
     } catch (error) {
@@ -114,11 +114,17 @@ const Home: React.FC = () => {
     try {
       setIsVibrating(true);
       
-      // Vibrar durante 5 segundos con intervalos de 500ms
-      await capacitorDeviceHelper.vibrate(5000, 500);
+      // Primer pulso de vibración
+      await Haptics.vibrate();
       
-      // Actualizamos el estado cuando termine
+      // Crear un intervalo para vibración continua
+      const interval = setInterval(async () => {
+        await Haptics.vibrate();
+      }, 500);
+      
+      // Detener después de 5 segundos
       setTimeout(() => {
+        clearInterval(interval);
         setIsVibrating(false);
       }, 5000);
     } catch (error) {
@@ -218,8 +224,8 @@ const Home: React.FC = () => {
   }, []);
 
   return (
-    <IonPage>
-      <IonContent fullscreen>
+    <IonPage placeholder="">
+      <IonContent fullscreen placeholder="">
         <div 
           className={`alarm-button ${isAlarmActive ? 'active' : 'inactive'}`}
           onClick={handleButtonClick}

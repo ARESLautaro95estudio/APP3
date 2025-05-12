@@ -7,13 +7,11 @@ import {
   useIonViewDidLeave
 } from '@ionic/react';
 import { Haptics } from '@capacitor/haptics';
-import { Flashlight } from '@capacitor/flashlight';
 
 import PasswordModal from '../components/PasswordModal';
 import { orientationService, OrientationType } from '../services/OrientationService';
 import { soundService, SoundType } from '../services/SoundService';
-
-// Importamos estilos
+import { capacitorDeviceHelper } from '../services/CapacitorDeviceHelper';
 import './Home.css';
 
 const Home: React.FC = () => {
@@ -52,11 +50,11 @@ const Home: React.FC = () => {
   // Verificar capacidades nativas
   const checkNativeCapabilities = async () => {
     try {
-      // Verificar disponibilidad de linterna
-      const flashlightAvailable = await Flashlight.available();
+      // Verificar si es un dispositivo real
+      const isReal = await capacitorDeviceHelper.isRealDevice();
       
-      if (!flashlightAvailable) {
-        console.warn('Linterna no disponible en este dispositivo');
+      if (!isReal) {
+        console.warn('Ejecutando en un emulador o entorno de desarrollo');
       }
     } catch (error) {
       console.error('Error al verificar capacidades nativas:', error);
@@ -97,19 +95,11 @@ const Home: React.FC = () => {
   // Activar/desactivar linterna
   const toggleFlashlight = async (state: boolean) => {
     try {
-      // Verificar disponibilidad
-      const isAvailable = await Flashlight.available();
-      
-      if (!isAvailable) {
-        console.warn('Linterna no disponible');
-        return;
-      }
-      
       if (state && !isFlashlightOn) {
-        await Flashlight.toggle(true);
+        await capacitorDeviceHelper.toggleFlashlight(true);
         setIsFlashlightOn(true);
       } else if (!state && isFlashlightOn) {
-        await Flashlight.toggle(false);
+        await capacitorDeviceHelper.toggleFlashlight(false);
         setIsFlashlightOn(false);
       }
     } catch (error) {
@@ -124,17 +114,11 @@ const Home: React.FC = () => {
     try {
       setIsVibrating(true);
       
-      // Primer pulso de vibración
-      await Haptics.vibrate();
+      // Vibrar durante 5 segundos con intervalos de 500ms
+      await capacitorDeviceHelper.vibrate(5000, 500);
       
-      // Crear un intervalo para vibración continua
-      const interval = setInterval(async () => {
-        await Haptics.vibrate();
-      }, 500);
-      
-      // Detener después de 5 segundos
+      // Actualizamos el estado cuando termine
       setTimeout(() => {
-        clearInterval(interval);
         setIsVibrating(false);
       }, 5000);
     } catch (error) {
@@ -223,13 +207,13 @@ const Home: React.FC = () => {
   useEffect(() => {
     return () => {
       // Detener detección de orientación
-      orientationService.stop().catch(console.error);
+      orientationService.stop();
       
       // Detener sonidos
       soundService.stopAll();
       
       // Apagar linterna
-      toggleFlashlight(false).catch(console.error);
+      toggleFlashlight(false);
     };
   }, []);
 

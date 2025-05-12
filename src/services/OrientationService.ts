@@ -1,4 +1,4 @@
-import { DeviceMotion, DeviceMotionAccelerationData } from '@capacitor/device-motion';
+import { capacitorDeviceHelper, AccelerometerEvent } from './CapacitorDeviceHelper';
 
 // Enumeración para los tipos de orientación
 export enum OrientationType {
@@ -16,23 +16,23 @@ export interface OrientationCallback {
 
 // Configuración para el servicio
 interface OrientationConfig {
-  threshold: number;       // Umbral para detectar cambios significativos
-  changeThreshold: number; // Umbral para considerar un cambio en la orientación
-  frequency: number;       // Frecuencia de muestreo en milisegundos
+  threshold?: number;       // Umbral para detectar cambios significativos
+  changeThreshold?: number; // Umbral para considerar un cambio en la orientación
+  frequency?: number;       // Frecuencia de muestreo en milisegundos
 }
 
 class OrientationService {
-  private watchId: string | null = null;
-  private lastOrientation: DeviceMotionAccelerationData = { x: 0, y: 0, z: 0 };
+  private isWatching: boolean = false;
+  private lastOrientation: AccelerometerEvent = { x: 0, y: 0, z: 0 };
   private currentOrientation: OrientationType = OrientationType.NORMAL;
   private callback: OrientationCallback | null = null;
   private config: OrientationConfig = {
     threshold: 4.0,        // Umbral para detectar inclinación
-    changeThreshold: 3.0,  // Umbral para detectar cambios
+    changeThreshold: 3.0,  // Umbral para considerar un cambio en la orientación
     frequency: 500         // Frecuencia de muestreo en ms
   };
 
-  constructor(config?: Partial<OrientationConfig>) {
+  constructor(config?: OrientationConfig) {
     if (config) {
       this.config = { ...this.config, ...config };
     }
@@ -40,7 +40,7 @@ class OrientationService {
 
   // Iniciar la detección de orientación
   async start(callback: OrientationCallback): Promise<void> {
-    if (this.watchId) {
+    if (this.isWatching) {
       // Ya está iniciado, detener primero
       await this.stop();
     }
@@ -48,15 +48,13 @@ class OrientationService {
     this.callback = callback;
 
     try {
-      // Solicitar permisos si es necesario
-      await DeviceMotion.requestPermissions();
-      
-      // Iniciar la observación de movimiento
-      this.watchId = await DeviceMotion.watchAcceleration(
-        { frequency: this.config.frequency },
-        this.handleMotionChange.bind(this)
+      // Iniciar detección de acelerómetro usando nuestro helper
+      await capacitorDeviceHelper.startAccelerometer(
+        this.handleMotionChange.bind(this),
+        this.config.frequency
       );
       
+      this.isWatching = true;
       return Promise.resolve();
     } catch (error) {
       console.error('Error al iniciar detección de orientación:', error);
@@ -66,10 +64,11 @@ class OrientationService {
 
   // Detener la detección de orientación
   async stop(): Promise<void> {
-    if (this.watchId) {
+    if (this.isWatching) {
       try {
-        await DeviceMotion.removeAllListeners();
-        this.watchId = null;
+        // Detener el acelerómetro
+        capacitorDeviceHelper.stopAccelerometer();
+        this.isWatching = false;
         this.callback = null;
         return Promise.resolve();
       } catch (error) {
@@ -81,7 +80,7 @@ class OrientationService {
   }
 
   // Manejar cambios en el movimiento
-  private handleMotionChange(acceleration: DeviceMotionAccelerationData): void {
+  private handleMotionChange(acceleration: AccelerometerEvent): void {
     const { x, y, z } = acceleration;
     const { threshold, changeThreshold } = this.config;
     
@@ -108,10 +107,10 @@ class OrientationService {
         if (y > threshold) {
           newOrientation = OrientationType.VERTICAL;
         }
-      } else if (Math.abs(z) > threshold) {
-        if (z > threshold) {
-          newOrientation = OrientationType.HORIZONTAL;
-        }
+      } else if (Math.abs(z) > threshold && Math.abs(z) < 8) {
+        // Para horizontal, verificamos que z esté por encima del umbral
+        // pero no sea cercano a 9.8 (gravedad en posición normal)
+        newOrientation = OrientationType.HORIZONTAL;
       }
       
       // Si la orientación ha cambiado, notificar al callback

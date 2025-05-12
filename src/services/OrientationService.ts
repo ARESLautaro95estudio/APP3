@@ -1,4 +1,4 @@
-import { capacitorDeviceHelper, AccelerometerEvent } from './CapacitorDeviceHelper';
+import { Motion, MotionEventResult } from '@capacitor/motion';
 
 // Enumeración para los tipos de orientación
 export enum OrientationType {
@@ -23,12 +23,12 @@ interface OrientationConfig {
 
 class OrientationService {
   private isWatching: boolean = false;
-  private lastOrientation: AccelerometerEvent = { x: 0, y: 0, z: 0 };
+  private lastOrientation: MotionEventResult = { accelerationIncludingGravity: { x: 0, y: 0, z: 0 } };
   private currentOrientation: OrientationType = OrientationType.NORMAL;
   private callback: OrientationCallback | null = null;
   private config: OrientationConfig = {
     threshold: 4.0,        // Umbral para detectar inclinación
-    changeThreshold: 3.0,  // Umbral para considerar un cambio en la orientación
+    changeThreshold: 3.0,  // Umbral para detectar cambios
     frequency: 500         // Frecuencia de muestreo en ms
   };
 
@@ -48,11 +48,11 @@ class OrientationService {
     this.callback = callback;
 
     try {
-      // Iniciar detección de acelerómetro usando nuestro helper
-      await capacitorDeviceHelper.startAccelerometer(
-        this.handleMotionChange.bind(this),
-        this.config.frequency
-      );
+      // Solicitar permisos si es necesario
+      await Motion.requestPermissions();
+      
+      // Iniciar la observación de movimiento
+      await Motion.addListener('accel', this.handleMotionChange.bind(this));
       
       this.isWatching = true;
       return Promise.resolve();
@@ -66,8 +66,7 @@ class OrientationService {
   async stop(): Promise<void> {
     if (this.isWatching) {
       try {
-        // Detener el acelerómetro
-        capacitorDeviceHelper.stopAccelerometer();
+        await Motion.removeAllListeners();
         this.isWatching = false;
         this.callback = null;
         return Promise.resolve();
@@ -80,19 +79,24 @@ class OrientationService {
   }
 
   // Manejar cambios en el movimiento
-  private handleMotionChange(acceleration: AccelerometerEvent): void {
-    const { x, y, z } = acceleration;
+  private handleMotionChange(acceleration: MotionEventResult): void {
+    // Al inicio del método handleMotionChange:
+const threshold = this.config.threshold || 4.0;
+const changeThreshold = this.config.changeThreshold || 3.0;
+    if (!acceleration.accelerationIncludingGravity) return;
+    
+    const { x, y, z } = acceleration.accelerationIncludingGravity;
     const { threshold, changeThreshold } = this.config;
     
     // Verificar si hay un cambio significativo en la orientación
     const significantChange = 
-      Math.abs(x - this.lastOrientation.x) > changeThreshold || 
-      Math.abs(y - this.lastOrientation.y) > changeThreshold || 
-      Math.abs(z - this.lastOrientation.z) > changeThreshold;
+      Math.abs(x - this.lastOrientation.accelerationIncludingGravity.x) > changeThreshold || 
+      Math.abs(y - this.lastOrientation.accelerationIncludingGravity.y) > changeThreshold || 
+      Math.abs(z - this.lastOrientation.accelerationIncludingGravity.z) > changeThreshold;
     
     if (significantChange) {
       // Actualizar última orientación
-      this.lastOrientation = { x, y, z };
+      this.lastOrientation = acceleration;
       
       // Determinar la orientación actual
       let newOrientation: OrientationType = OrientationType.NORMAL;
@@ -107,10 +111,10 @@ class OrientationService {
         if (y > threshold) {
           newOrientation = OrientationType.VERTICAL;
         }
-      } else if (Math.abs(z) > threshold && Math.abs(z) < 8) {
-        // Para horizontal, verificamos que z esté por encima del umbral
-        // pero no sea cercano a 9.8 (gravedad en posición normal)
-        newOrientation = OrientationType.HORIZONTAL;
+      } else if (Math.abs(z) > threshold) {
+        if (z > threshold) {
+          newOrientation = OrientationType.HORIZONTAL;
+        }
       }
       
       // Si la orientación ha cambiado, notificar al callback

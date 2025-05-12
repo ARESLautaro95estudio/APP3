@@ -1,6 +1,4 @@
 import { Haptics } from '@capacitor/haptics';
-import { Flashlight } from '@capacitor/flashlight';
-import { DeviceMotion, DeviceMotionAccelerationData } from '@capacitor/device-motion';
 
 // Verificar disponibilidad de sensores
 export const checkSensorsAvailability = async () => {

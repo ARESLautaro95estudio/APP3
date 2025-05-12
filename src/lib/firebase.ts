@@ -12,10 +12,51 @@ const firebaseConfig = {
   appId: "1:632233436576:web:e49ad8a9122701b38430c5",
   measurementId: "G-6P8GLWGBY8"
 };
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+// Iniciar sesión anónima
+export const signInAnon = async () => {
+  try {
+    const userCredential = await signInAnonymously(auth);
+    return userCredential.user;
+  } catch (error) {
+    console.error('Error al iniciar sesión anónima:', error);
+    throw error;
+  }
+};
 
-export default app;
+// Guardar contraseña en Firestore (opcional)
+export const savePassword = async (userId: string, hashedPassword: string) => {
+  try {
+    await setDoc(doc(db, 'users', userId), {
+      password: hashedPassword,
+      createdAt: new Date()
+    });
+    return true;
+  } catch (error) {
+    console.error('Error al guardar contraseña:', error);
+    throw error;
+  }
+};
+
+// Obtener contraseña de Firestore (opcional)
+export const getPassword = async (userId: string) => {
+  try {
+    const docRef = doc(db, 'users', userId);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      return docSnap.data().password;
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.error('Error al obtener contraseña:', error);
+    throw error;
+  }
+};
+
+export { auth, db };

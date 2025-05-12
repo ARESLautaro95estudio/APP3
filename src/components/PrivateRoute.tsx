@@ -1,23 +1,25 @@
-import { Redirect, Route, RouteProps } from 'react-router';
-import { useAuth } from '../contexts/AuthContext';
-import { IonLoading } from '@ionic/react';
+import React from 'react';
+import { Route, Redirect, RouteProps } from 'react-router-dom';
 
 interface PrivateRouteProps extends RouteProps {
+  isAuthenticated: boolean;
   component: React.ComponentType<any>;
 }
 
-const PrivateRoute: React.FC<PrivateRouteProps> = ({ component: Component, ...rest }) => {
-  const { currentUser, loading } = useAuth();
-
-  if (loading) {
-    return <IonLoading isOpen={true} message="Cargando..." />;
-  }
-
+const PrivateRoute: React.FC<PrivateRouteProps> = ({
+  isAuthenticated,
+  component: Component,
+  ...rest
+}) => {
   return (
     <Route
       {...rest}
       render={(props) =>
-        currentUser ? <Component {...props} /> : <Redirect to="/login" />
+        isAuthenticated ? (
+          <Component {...props} />
+        ) : (
+          <Redirect to="/login" />
+        )
       }
     />
   );

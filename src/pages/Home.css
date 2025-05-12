@@ -1,28 +1,43 @@
-.full-height {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .alarm-button {
-  height: 100% !important;
-  width: 100% !important;
-  margin: 0 !important;
-  font-size: 24px !important;
-  font-weight: bold !important;
-  --border-radius: 0 !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  user-select: none;
 }
 
-/* Para asegurar que el botón ocupe toda la pantalla */
-ion-content {
-  --padding-start: 0;
-  --padding-end: 0;
-  --padding-top: 0;
-  --padding-bottom: 0;
+.active {
+  background-color: #f44336; /* Rojo para indicar que está activa */
+  color: white;
 }
 
-/* Para mejorar la visibilidad del texto en el botón */
-.alarm-button.button-activated {
-  opacity: 0.8;
+.inactive {
+  background-color: #4CAF50; /* Verde para indicar que está inactiva */
+  color: white;
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+p {
+  font-size: 1.2rem;
+}
+
+.password-modal {
+  padding: 2rem;
+  text-align: center;
+}
+
+.password-input {
+  margin: 1.5rem 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.5rem;
 }

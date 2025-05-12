@@ -1,7 +1,11 @@
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously as firebaseSignInAnonymously } from 'firebase/auth';
+import { 
+  getFirestore, 
+  doc as firestoreDoc, 
+  setDoc as firestoreSetDoc, 
+  getDoc as firestoreGetDoc 
+} from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDUUOq1tC55glGr45dLo8T2nuD_-ELLWXc",
@@ -12,6 +16,7 @@ const firebaseConfig = {
   appId: "1:632233436576:web:e49ad8a9122701b38430c5",
   measurementId: "G-6P8GLWGBY8"
 };
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -20,7 +25,7 @@ const db = getFirestore(app);
 // Iniciar sesión anónima
 export const signInAnon = async () => {
   try {
-    const userCredential = await signInAnonymously(auth);
+    const userCredential = await firebaseSignInAnonymously(auth);
     return userCredential.user;
   } catch (error) {
     console.error('Error al iniciar sesión anónima:', error);
@@ -31,7 +36,7 @@ export const signInAnon = async () => {
 // Guardar contraseña en Firestore (opcional)
 export const savePassword = async (userId: string, hashedPassword: string) => {
   try {
-    await setDoc(doc(db, 'users', userId), {
+    await firestoreSetDoc(firestoreDoc(db, 'users', userId), {
       password: hashedPassword,
       createdAt: new Date()
     });
@@ -45,8 +50,8 @@ export const savePassword = async (userId: string, hashedPassword: string) => {
 // Obtener contraseña de Firestore (opcional)
 export const getPassword = async (userId: string) => {
   try {
-    const docRef = doc(db, 'users', userId);
-    const docSnap = await getDoc(docRef);
+    const docRef = firestoreDoc(db, 'users', userId);
+    const docSnap = await firestoreGetDoc(docRef);
     
     if (docSnap.exists()) {
       return docSnap.data().password;

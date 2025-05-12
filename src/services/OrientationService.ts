@@ -16,9 +16,9 @@ export interface OrientationCallback {
 
 // Configuración para el servicio
 interface OrientationConfig {
-  threshold?: number;       // Umbral para detectar cambios significativos
-  changeThreshold?: number; // Umbral para considerar un cambio en la orientación
-  frequency?: number;       // Frecuencia de muestreo en milisegundos
+  threshold: number;       // Umbral para detectar cambios significativos
+  changeThreshold: number; // Umbral para considerar un cambio en la orientación
+  frequency: number;       // Frecuencia de muestreo en milisegundos
 }
 
 class OrientationService {
@@ -32,7 +32,7 @@ class OrientationService {
     frequency: 500         // Frecuencia de muestreo en ms
   };
 
-  constructor(config?: OrientationConfig) {
+  constructor(config?: Partial<OrientationConfig>) {
     if (config) {
       this.config = { ...this.config, ...config };
     }

@@ -12,6 +12,8 @@ import { Flashlight } from '@capacitor/flashlight';
 import PasswordModal from '../components/PasswordModal';
 import { orientationService, OrientationType } from '../services/OrientationService';
 import { soundService, SoundType } from '../services/SoundService';
+
+// Importamos estilos
 import './Home.css';
 
 const Home: React.FC = () => {
@@ -95,6 +97,14 @@ const Home: React.FC = () => {
   // Activar/desactivar linterna
   const toggleFlashlight = async (state: boolean) => {
     try {
+      // Verificar disponibilidad
+      const isAvailable = await Flashlight.available();
+      
+      if (!isAvailable) {
+        console.warn('Linterna no disponible');
+        return;
+      }
+      
       if (state && !isFlashlightOn) {
         await Flashlight.toggle(true);
         setIsFlashlightOn(true);
@@ -213,13 +223,13 @@ const Home: React.FC = () => {
   useEffect(() => {
     return () => {
       // Detener detección de orientación
-      orientationService.stop();
+      orientationService.stop().catch(console.error);
       
       // Detener sonidos
       soundService.stopAll();
       
       // Apagar linterna
-      toggleFlashlight(false);
+      toggleFlashlight(false).catch(console.error);
     };
   }, []);
 
